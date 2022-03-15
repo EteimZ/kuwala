@@ -15,7 +15,6 @@ from sqlalchemy.orm import Session
 router = APIRouter(
     prefix="/data-source",
     tags=["data_source"],
-    responses={400: {"description": "Bad request"}, 404: {"description": "Not found"}},
 )
 
 

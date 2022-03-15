@@ -1,6 +1,8 @@
 import json
+import os
 import uuid
 
+from controller.dbt_controller import create_empty_dbt_project
 from database.crud.data_catalog import get_data_catalog_item, get_data_catalog_items
 from database.crud.data_source import create_data_source
 from database.database import get_db
@@ -48,7 +50,7 @@ def select_items(items: DataCatalogSelect, db: Session = Depends(get_db)):
         data_source = create_data_source(
             db=db,
             data_source=DataSourceCreate(
-                id=str(uuid.uuid4()),
+                id=str(uuid.uuid4()).replace("-", ""),
                 data_catalog_item_id=item_id,
                 connection_parameters=connection_parameters,
                 connected=False,
@@ -60,5 +62,13 @@ def select_items(items: DataCatalogSelect, db: Session = Depends(get_db)):
                 base_object=data_source, list_parameters=["connection_parameters"]
             )
         )
+
+        if item_id == "postgres" or item_id == "bigquery":
+            script_dir = os.path.dirname(__file__)
+            target_dir = os.path.join(script_dir, "../../../../tmp/kuwala/backend/dbt")
+
+            create_empty_dbt_project(
+                data_source_id=data_source.id, warehouse=item_id, target_dir=target_dir
+            )
 
     return data_sources
