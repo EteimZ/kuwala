@@ -60,6 +60,12 @@ def save_connection(
     data_source = update_connection_parameters(
         db=db, data_source_updated_connection=data_source_updated_connection
     )
+    data_catalog_item_id = data_source.data_catalog_item_id
+
+    if data_catalog_item_id == "postgres" or data_catalog_item_id == "bigquery":
+        data_source_controller.update_dbt_connection_parameters(
+            data_source=data_source, connection_parameters=connection_parameters
+        )
 
     return data_source
 

@@ -123,3 +123,27 @@ def get_table_preview(
         rows.append(list(row))
 
     return dict(columns=columns, rows=rows)
+
+
+def update_dbt_connection_parameters(
+    profile_yaml: dict, connection_parameters: ConnectionParameters
+) -> dict:
+    credentials_json = connection_parameters.credentials_json
+    dev_profile = profile_yaml["kuwala"]["outputs"]["dev"]
+    dev_profile["dataset"] = "dbt_kuwala"
+    dev_profile["project"] = connection_parameters.credentials_json.project_id
+    dev_profile["method"] = "service-account-json"
+    dev_profile["keyfile_json"] = dict(
+        type=credentials_json.type,
+        project_id=credentials_json.project_id,
+        private_key_id=credentials_json.private_key_id,
+        private_key=credentials_json.private_key,
+        client_email=credentials_json.client_email,
+        client_id=credentials_json.client_id,
+        auth_uri=credentials_json.auth_uri,
+        token_uri=credentials_json.token_uri,
+        auth_provider_x509_cert_url=credentials_json.auth_provider_x509_cert_url,
+        client_x509_cert_url=credentials_json.client_x509_cert_url,
+    )
+
+    return profile_yaml

@@ -1,3 +1,5 @@
+import os
+
 import controller.data_source.bigquery as bigquery_controller
 import controller.data_source.postgres as postgres_controller
 import database.crud.data_source as crud_data_source
@@ -7,6 +9,7 @@ from database.schemas.data_source import ConnectionParameters
 from database.utils.encoder import list_of_dicts_to_dict
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
+import yaml
 
 
 def get_controller(data_catalog_item_id: str):
@@ -16,6 +19,12 @@ def get_controller(data_catalog_item_id: str):
         controller = bigquery_controller
     elif data_catalog_item_id == "postgres":
         controller = postgres_controller
+
+    if not controller:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Could not find controller for data catalog item {data_catalog_item_id}",
+        )
 
     return controller
 
@@ -55,35 +64,22 @@ def test_connection(
     connection_parameters: ConnectionParameters,
     db: Session = Depends(get_db),
 ) -> bool:
-    connected = False
     data_source, data_catalog_item_id = get_data_source_and_data_catalog_item_id(
         data_source_id=data_source_id, db=db
     )
     controller = get_controller(data_catalog_item_id=data_catalog_item_id)
 
-    if controller:
-        connected = controller.test_connection(
-            connection_parameters=connection_parameters
-        )
-
-    if not connected:
-        return False
-
-    return True
+    return controller.test_connection(connection_parameters=connection_parameters)
 
 
 def get_schema(data_source_id: str, db: Session = Depends(get_db)):
-    schema = None
     data_source, data_catalog_item_id = get_data_source_and_data_catalog_item_id(
         db=db, data_source_id=data_source_id
     )
     connection_parameters = get_connection_parameters(data_source)
     controller = get_controller(data_catalog_item_id=data_catalog_item_id)
 
-    if controller:
-        schema = controller.get_schema(connection_parameters=connection_parameters)
-
-    return schema
+    return controller.get_schema(connection_parameters=connection_parameters)
 
 
 def get_columns(
@@ -155,3 +151,27 @@ def get_table_preview(
         )
 
     return data
+
+
+def update_dbt_connection_parameters(
+    data_source: models.DataSource, connection_parameters: ConnectionParameters
+):
+    script_dir = os.path.dirname(__file__)
+    profile_path = os.path.join(
+        script_dir,
+        f"../../../../../tmp/kuwala/backend/dbt/{data_source.id}/profiles.yml",
+    )
+
+    with open(profile_path, "r") as file:
+        profile_yaml = yaml.safe_load(file)
+
+        file.close()
+
+    controller = get_controller(data_catalog_item_id=data_source.data_catalog_item_id)
+    profile_yaml = controller.update_dbt_connection_parameters(
+        profile_yaml=profile_yaml, connection_parameters=connection_parameters
+    )
+
+    with open(profile_path, "w") as file:
+        yaml.safe_dump(profile_yaml, file)
+        file.close()
