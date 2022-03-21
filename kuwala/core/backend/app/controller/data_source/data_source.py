@@ -8,8 +8,8 @@ import database.models.data_source as models
 from database.schemas.data_source import ConnectionParameters
 from database.utils.encoder import list_of_dicts_to_dict
 from fastapi import Depends, HTTPException
+import oyaml as yaml
 from sqlalchemy.orm import Session
-import yaml
 
 
 def get_controller(data_catalog_item_id: str):
@@ -173,5 +173,5 @@ def update_dbt_connection_parameters(
     )
 
     with open(profile_path, "w") as file:
-        yaml.safe_dump(profile_yaml, file)
+        yaml.safe_dump(profile_yaml, file, indent=4)
         file.close()

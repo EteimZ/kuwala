@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import subprocess
 
-import yaml
+import oyaml as yaml
 
 
 def create_empty_dbt_project(data_source_id: str, warehouse: str, target_dir: str):
@@ -15,10 +15,11 @@ def create_empty_dbt_project(data_source_id: str, warehouse: str, target_dir: st
 
     profiles_file_path = f"{target_dir}/{data_source_id}/sample.profiles.yml"
     project_file_path = f"{target_dir}/{data_source_id}/dbt_project.yml"
+    packages_file_path = f"{target_dir}/{data_source_id}/packages.yml"
 
     os.rename(profiles_file_path, profiles_file_path.replace("sample.", ""))
-    os.remove(f"{target_dir}/{data_source_id}/packages.yml")
 
+    # Update dbt_project.yml to the latest version
     with open(project_file_path, "r") as file:
         project_yaml = yaml.safe_load(file)
 
@@ -29,5 +30,19 @@ def create_empty_dbt_project(data_source_id: str, warehouse: str, target_dir: st
     project_yaml["seed-paths"] = project_yaml.pop("data-paths")
 
     with open(project_file_path, "w") as file:
-        yaml.safe_dump(project_yaml, file)
+        yaml.safe_dump(project_yaml, file, indent=4)
         file.close()
+
+    # Update dbt packages
+    with open(packages_file_path, "r") as file:
+        packages_yaml = yaml.safe_load(file)
+
+        file.close()
+
+    packages_yaml["packages"] = [dict(package="dbt-labs/codegen", version="0.5.0")]
+
+    with open(packages_file_path, "w") as file:
+        yaml.safe_dump(packages_yaml, file, indent=4)
+        file.close()
+
+    subprocess.call("dbt deps", cwd=f"{target_dir}/{data_source_id}", shell=True)

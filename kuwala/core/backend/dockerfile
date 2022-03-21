@@ -9,7 +9,7 @@ COPY ./core/backend /opt/core/backend
 
 WORKDIR /opt/core/backend
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN DBT_PSYCOPG2_NAME=psycopg2 pip install --no-cache-dir -r requirements.txt --no-binary dbt-postgres
 
 WORKDIR /opt/core/backend/app
 
